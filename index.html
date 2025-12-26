@@ -8,39 +8,20 @@
 </head>
 <body>
     <div class="container">
+        <div class="left-panel" id="left-panel">
+            <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">Node Chances</h2>
+            <div id="node-chances"></div>
+        </div>
         <div class="main-area">
             <button id="create-node-btn">Create New Node</button>
-            <div id="particle-area"></div>
+            <div id="particle-area">
+                <canvas id="connection-canvas" style="position: absolute; top: 0; left: 0; pointer-events: none; z-index: 1;"></canvas>
+            </div>
         </div>
         <div class="side-panel" id="side-panel">
             <h2 style="color: #667eea; margin-bottom: 20px; font-size: 24px;">Letter Chances</h2>
-            <div class="letter-chances">
-                <div class="letter-row"><span>A:</span> <span>10%</span></div>
-                <div class="letter-row"><span>B:</span> <span>20%</span></div>
-                <div class="letter-row"><span>C:</span> <span>15%</span></div>
-                <div class="letter-row"><span>D:</span> <span>5%</span></div>
-                <div class="letter-row"><span>E:</span> <span>25%</span></div>
-                <div class="letter-row"><span>F:</span> <span>8%</span></div>
-                <div class="letter-row"><span>G:</span> <span>12%</span></div>
-                <div class="letter-row"><span>H:</span> <span>18%</span></div>
-                <div class="letter-row"><span>I:</span> <span>22%</span></div>
-                <div class="letter-row"><span>J:</span> <span>2%</span></div>
-                <div class="letter-row"><span>K:</span> <span>3%</span></div>
-                <div class="letter-row"><span>L:</span> <span>14%</span></div>
-                <div class="letter-row"><span>M:</span> <span>9%</span></div>
-                <div class="letter-row"><span>N:</span> <span>16%</span></div>
-                <div class="letter-row"><span>O:</span> <span>19%</span></div>
-                <div class="letter-row"><span>P:</span> <span>7%</span></div>
-                <div class="letter-row"><span>Q:</span> <span>1%</span></div>
-                <div class="letter-row"><span>R:</span> <span>13%</span></div>
-                <div class="letter-row"><span>S:</span> <span>21%</span></div>
-                <div class="letter-row"><span>T:</span> <span>17%</span></div>
-                <div class="letter-row"><span>U:</span> <span>6%</span></div>
-                <div class="letter-row"><span>V:</span> <span>4%</span></div>
-                <div class="letter-row"><span>W:</span> <span>11%</span></div>
-                <div class="letter-row"><span>X:</span> <span>0%</span></div>
-                <div class="letter-row"><span>Y:</span> <span>23%</span></div>
-                <div class="letter-row"><span>Z:</span> <span>24%</span></div>
+            <div class="letter-chances" id="letter-chances">
+                <!-- Populated dynamically -->
             </div>
         </div>
     </div>
