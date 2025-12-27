@@ -123,6 +123,10 @@ body {
     transform: scale(1.1);
 }
 
+.particle.split {
+    opacity: 0.3;
+}
+
 .side-panel {
     width: 320px;
     background-color: #1e1e1e;
@@ -188,4 +192,19 @@ body {
     margin-left: 15px;
     font-size: 14px;
     color: #cccccc;
+}
+
+.split-btn {
+    margin-left: auto;
+    padding: 4px 8px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.split-btn:hover {
+    background: #5a67d8;
 }

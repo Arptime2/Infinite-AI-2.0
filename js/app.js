@@ -9,6 +9,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const canvasCtx = connectionCanvas.getContext('2d');
     let particleCount = 0;
     const nodes = [];
+
+    const deleteNode = (nodeId) => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node) {
+            // Recursively delete children first
+            node.children.forEach(childId => deleteNode(childId));
+            node.children = [];
+        }
+        // Remove from nodes array
+        const index = nodes.findIndex(n => n.id === nodeId);
+        if (index !== -1) {
+            nodes.splice(index, 1);
+        }
+        // Remove particle from DOM
+        const particle = particleArea.querySelector(`.particle[data-id="${nodeId}"]`);
+        if (particle) particle.remove();
+        // Update nodeChances for remaining nodes
+        nodes.forEach(n => {
+            delete n.nodeChances[`Node ${nodeId}`];
+        });
+        // If current selected, deselect
+        if (currentSelectedNode === nodeId) {
+            currentSelectedNode = null;
+            sidePanel.classList.remove('active');
+            leftPanel.classList.remove('active');
+            particleArea.style.transform = 'scale(1) translateX(0px)';
+            updateCanvasSize();
+        }
+        // If another node is selected, update its node chances display
+        if (currentSelectedNode && nodes.find(n => n.id === currentSelectedNode)) {
+            const selectedNodeData = nodes.find(n => n.id === currentSelectedNode);
+            populateNodeChances(selectedNodeData.nodeChances);
+        }
+        // Redraw
+        drawConnections();
+        updateCanvasSize();
+    };
     let currentSelectedNode = null;
 
     const updateCanvasSize = () => {
@@ -36,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const y1 = particleMap[nodeId].y;
             for (const [target, chance] of Object.entries(nodeData.nodeChances)) {
                 const targetId = parseInt(target.split(' ')[1]);
+                if (nodeData.split || (particleMap[targetId] && particleMap[targetId].nodeData.split)) continue;
                 if (targetId !== nodeId && particleMap[targetId] && Math.random() < chance / 100) {
                     const x2 = particleMap[targetId].x;
                     const y2 = particleMap[targetId].y;
@@ -98,11 +136,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return chances;
     };
 
-    const generateNodeChances = (nodeId) => {
+    const generateNodeChances = () => {
         const chances = {};
-        for (let i = 1; i <= nodeId; i++) {
-            chances[`Node ${i}`] = Math.floor(Math.random() * 101);
-        }
+        nodes.forEach(node => {
+            chances[`Node ${node.id}`] = Math.floor(Math.random() * 101);
+        });
         return chances;
     };
 
@@ -123,17 +161,53 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const node in chances) {
             const row = document.createElement('div');
             row.className = 'node-chance-row';
-            row.innerHTML = `<span>${node}:</span> <span>${chances[node]}%</span>`;
+            const nodeId = parseInt(node.split(' ')[1]);
+            const nodeData = nodes.find(n => n.id === nodeId);
+            const isSplit = nodeData ? nodeData.split : false;
+            const buttonText = isSplit ? 'Unsplit' : 'Split';
+            row.innerHTML = `<span>${node}:</span> <span>${chances[node]}%</span> <button class="split-btn" data-node-id="${nodeId}">${buttonText}</button>`;
             nodeChances.appendChild(row);
         }
     };
 
+    nodeChances.addEventListener('click', (e) => {
+        if (e.target.classList.contains('split-btn')) {
+            const nodeId = parseInt(e.target.dataset.nodeId);
+            const nodeData = nodes.find(n => n.id === nodeId);
+            if (nodeData) {
+                const wasSplit = nodeData.split;
+                nodeData.split = !nodeData.split;
+                const particle = particleArea.querySelector(`.particle[data-id="${nodeId}"]`);
+                if (particle) {
+                    if (nodeData.split) {
+                        particle.classList.add('split');
+                    } else {
+                        particle.classList.remove('split');
+                    }
+                }
+                // If now splitting (was not split, now is), create two new child nodes
+                if (!wasSplit && nodeData.split) {
+                    createParticle(nodeId);
+                    createParticle(nodeId);
+                }
+                // If now unsplitting (was split, now not), delete children
+                if (wasSplit && !nodeData.split) {
+                    nodeData.children.forEach(childId => deleteNode(childId));
+                    nodeData.children = [];
+                }
+                // Update button text
+                e.target.textContent = nodeData.split ? 'Unsplit' : 'Split';
+                // Redraw connections
+                drawConnections();
+            }
+        }
+    });
 
-
-    const createParticle = () => {
+    const createParticle = (parentId = null) => {
         particleCount++;
         const letterChances = generateRandomChances();
-        const nodeChances = generateNodeChances(particleCount);
+        const nodeChances = generateNodeChances();  // chances to existing nodes
+        nodeChances[`Node ${particleCount}`] = Math.floor(Math.random() * 101);  // chance to self
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.textContent = particleCount;
@@ -192,12 +266,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         particleArea.appendChild(particle);
-        nodes.push({ id: particleCount, letterChances, nodeChances });
-
-        // Update existing nodes' chances to include the new node
-        for (let i = 0; i < nodes.length - 1; i++) {
-            nodes[i].nodeChances = generateNodeChances(particleCount);
+        const newNode = { id: particleCount, letterChances, nodeChances, split: false, children: [] };
+        nodes.push(newNode);
+        if (parentId) {
+            const parent = nodes.find(n => n.id === parentId);
+            if (parent) {
+                parent.children.push(particleCount);
+            }
         }
+
+        // Add chance to the new node for existing nodes
+        nodes.slice(0, -1).forEach(node => {
+            node.nodeChances[`Node ${particleCount}`] = Math.floor(Math.random() * 101);
+        })
 
         // If a node is currently selected, update its display
         if (currentSelectedNode) {
