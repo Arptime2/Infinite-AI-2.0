@@ -552,4 +552,10 @@ document.addEventListener('DOMContentLoaded', () => {
      particleArea.style.transform = `scale(${scale}) translateX(${translateX}px)`;
      updateCanvasSize();
 
+     // Input validation for command input
+     const commandInput = document.getElementById('command-input');
+     commandInput.addEventListener('input', () => {
+         commandInput.value = commandInput.value.replace(/[^A-Z]/g, '').toUpperCase();
+     });
+
  });
