@@ -48,12 +48,63 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     let currentSelectedNode = null;
 
+    const splitNode = (nodeId) => {
+        const nodeData = nodes.find(n => n.id === nodeId);
+        if (nodeData && !nodeData.split) {
+            nodeData.split = true;
+            const particle = particleArea.querySelector(`.particle[data-id="${nodeId}"]`);
+            if (particle) {
+                particle.classList.add('split');
+            }
+            // Create two child nodes
+            createParticle(nodeId);
+            createParticle(nodeId);
+            // If this node is selected, update button text
+            if (currentSelectedNode === nodeId) {
+                const splitBtn = nodeChances.querySelector(`.split-btn[data-node-id="${nodeId}"]`);
+                if (splitBtn) splitBtn.textContent = 'Unsplit';
+            }
+        }
+    };
+
+    const unsplitNode = (nodeId) => {
+        const nodeData = nodes.find(n => n.id === nodeId);
+        if (nodeData && nodeData.split) {
+            nodeData.split = false;
+            const particle = particleArea.querySelector(`.particle[data-id="${nodeId}"]`);
+            if (particle) {
+                particle.classList.remove('split');
+            }
+            // Delete children
+            nodeData.children.forEach(childId => deleteNode(childId));
+            nodeData.children = [];
+            // If this node is selected, update button text
+            if (currentSelectedNode === nodeId) {
+                const splitBtn = nodeChances.querySelector(`.split-btn[data-node-id="${nodeId}"]`);
+                if (splitBtn) splitBtn.textContent = 'Split';
+            }
+        }
+    };
+
     const updateCanvasSize = () => {
         connectionCanvas.width = particleArea.offsetWidth;
         connectionCanvas.height = particleArea.offsetHeight;
     };
 
+    let drawing = false;
     const drawConnections = () => {
+        if (drawing) return; // Prevent recursion
+        drawing = true;
+
+        // Random split/unsplit based on chances
+        nodes.forEach(node => {
+            if (!node.split && Math.random() < node.nodeChances['Split'] / 100) {
+                splitNode(node.id);
+            } else if (node.split && Math.random() < node.nodeChances['Unsplit'] / 100) {
+                unsplitNode(node.id);
+            }
+        });
+
         canvasCtx.clearRect(0, 0, connectionCanvas.width, connectionCanvas.height);
         const particles = particleArea.querySelectorAll('.particle');
         const particleMap = {};
@@ -125,6 +176,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+
+        drawing = false;
     };
 
     const generateRandomChances = () => {
@@ -141,6 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
         nodes.forEach(node => {
             chances[`Node ${node.id}`] = Math.floor(Math.random() * 101);
         });
+        chances['Split'] = Math.floor(Math.random() * 101);
+        chances['Unsplit'] = Math.floor(Math.random() * 101);
         return chances;
     };
 
@@ -158,15 +213,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const populateNodeChances = (chances) => {
         nodeChances.innerHTML = '';
+        // Add Split and Unsplit chances first
+        if (chances['Split'] !== undefined) {
+            const splitRow = document.createElement('div');
+            splitRow.className = 'node-chance-row';
+            splitRow.innerHTML = `<span>Split:</span> <span>${chances['Split']}%</span>`;
+            nodeChances.appendChild(splitRow);
+        }
+        if (chances['Unsplit'] !== undefined) {
+            const unsplitRow = document.createElement('div');
+            unsplitRow.className = 'node-chance-row';
+            unsplitRow.innerHTML = `<span>Unsplit:</span> <span>${chances['Unsplit']}%</span>`;
+            nodeChances.appendChild(unsplitRow);
+        }
+        // Then add node chances with buttons
         for (const node in chances) {
-            const row = document.createElement('div');
-            row.className = 'node-chance-row';
-            const nodeId = parseInt(node.split(' ')[1]);
-            const nodeData = nodes.find(n => n.id === nodeId);
-            const isSplit = nodeData ? nodeData.split : false;
-            const buttonText = isSplit ? 'Unsplit' : 'Split';
-            row.innerHTML = `<span>${node}:</span> <span>${chances[node]}%</span> <button class="split-btn" data-node-id="${nodeId}">${buttonText}</button>`;
-            nodeChances.appendChild(row);
+            if (node.startsWith('Node ')) {
+                const row = document.createElement('div');
+                row.className = 'node-chance-row';
+                const nodeId = parseInt(node.split(' ')[1]);
+                const nodeData = nodes.find(n => n.id === nodeId);
+                const isSplit = nodeData ? nodeData.split : false;
+                const buttonText = isSplit ? 'Unsplit' : 'Split';
+                row.innerHTML = `<span>${node}:</span> <span>${chances[node]}%</span> <button class="split-btn" data-node-id="${nodeId}">${buttonText}</button>`;
+                nodeChances.appendChild(row);
+            }
         }
     };
 
@@ -175,29 +246,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const nodeId = parseInt(e.target.dataset.nodeId);
             const nodeData = nodes.find(n => n.id === nodeId);
             if (nodeData) {
-                const wasSplit = nodeData.split;
-                nodeData.split = !nodeData.split;
-                const particle = particleArea.querySelector(`.particle[data-id="${nodeId}"]`);
-                if (particle) {
-                    if (nodeData.split) {
-                        particle.classList.add('split');
-                    } else {
-                        particle.classList.remove('split');
-                    }
+                if (nodeData.split) {
+                    unsplitNode(nodeId);
+                } else {
+                    splitNode(nodeId);
                 }
-                // If now splitting (was not split, now is), create two new child nodes
-                if (!wasSplit && nodeData.split) {
-                    createParticle(nodeId);
-                    createParticle(nodeId);
-                }
-                // If now unsplitting (was split, now not), delete children
-                if (wasSplit && !nodeData.split) {
-                    nodeData.children.forEach(childId => deleteNode(childId));
-                    nodeData.children = [];
-                }
-                // Update button text
-                e.target.textContent = nodeData.split ? 'Unsplit' : 'Split';
-                // Redraw connections
                 drawConnections();
             }
         }
