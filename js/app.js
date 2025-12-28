@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const particleArea = document.getElementById('particle-area');
     const sidePanel = document.getElementById('side-panel');
     const leftPanel = document.getElementById('left-panel');
+    const inputPanel = document.getElementById('input-panel');
     const nodeChances = document.getElementById('node-chances');
     const letterChances = document.getElementById('letter-chances');
     const connectionCanvas = document.getElementById('connection-canvas');
@@ -341,11 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Click action
                     const nodeData = nodes.find(n => n.id == particle.dataset.id);
                     currentSelectedNode = nodeData.id;
-                    populateLetterChances(nodeData.letterChances);
-                    populateNodeChances(nodeData.nodeChances);
-                    sidePanel.classList.add('active');
-                    leftPanel.classList.add('active');
-                    const originalWidth = particleArea.offsetWidth;
+                     populateLetterChances(nodeData.letterChances);
+                     populateNodeChances(nodeData.nodeChances);
+                     sidePanel.classList.add('active');
+                     leftPanel.classList.add('active');
+                     inputPanel.classList.add('hidden');
+                     const originalWidth = particleArea.offsetWidth;
                     const leftOccupied = 270;
                     const rightOccupied = 415;
                     const availableLeft = leftOccupied;
@@ -404,22 +406,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Close panels when clicking outside
     particleArea.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('particle')) {
+        if (!e.target.classList.contains('particle') && currentSelectedNode !== null) {
             sidePanel.classList.remove('active');
             leftPanel.classList.remove('active');
-            particleArea.style.transform = 'scale(1) translateX(0px)';
+            inputPanel.classList.remove('hidden');
+            currentSelectedNode = null;
+            // Zoom out to make room for input panel
+            const originalWidth = particleArea.offsetWidth;
+            const leftOccupied = 400;
+            const rightOccupied = 0; // no right panel
+            const availableLeft = leftOccupied;
+            const availableRight = originalWidth - rightOccupied;
+            const scale = (availableRight - availableLeft) / originalWidth;
+            const centerX = (availableLeft + availableRight) / 2;
+            const currentCenter = originalWidth / 2;
+            const translateX = centerX - currentCenter;
+            particleArea.style.transform = `scale(${scale}) translateX(${translateX}px)`;
             updateCanvasSize();
         }
     });
 
-    // Close panels when clicking outside
-    particleArea.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('particle')) {
-            sidePanel.classList.remove('active');
-            leftPanel.classList.remove('active');
-            particleArea.style.transform = 'scale(1)';
-        }
-    });
+
 
      // Initial canvas size
      updateCanvasSize();
@@ -496,6 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      populateNodeChances(nodeData.nodeChances);
                      sidePanel.classList.add('active');
                      leftPanel.classList.add('active');
+                     inputPanel.classList.add('hidden');
                      // Transform particleArea to zoom out and make room for panels
                      const originalWidth = particleArea.offsetWidth;
                      const leftOccupied = 270;
@@ -529,5 +537,19 @@ document.addEventListener('DOMContentLoaded', () => {
      inputNode.nodeChances['Node 0'] = Math.floor(Math.random() * 101);
      inputNode.nodeChances['Node -1'] = Math.floor(Math.random() * 101);
      // For output, no outgoing
+
+     // Initially show input panel with zoom
+     inputPanel.classList.remove('hidden');
+     const originalWidth = particleArea.offsetWidth;
+     const leftOccupied = 400;
+     const rightOccupied = 0;
+     const availableLeft = leftOccupied;
+     const availableRight = originalWidth - rightOccupied;
+     const scale = (availableRight - availableLeft) / originalWidth;
+     const centerX = (availableLeft + availableRight) / 2;
+     const currentCenter = originalWidth / 2;
+     const translateX = centerX - currentCenter;
+     particleArea.style.transform = `scale(${scale}) translateX(${translateX}px)`;
+     updateCanvasSize();
 
  });
