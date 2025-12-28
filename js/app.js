@@ -113,9 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Random split/unsplit based on chances
         nodes.forEach(node => {
-            if (!node.split && Math.random() < node.nodeChances['Split'] / 100) {
+            if (!node.split && !node.justCreated && Math.random() < node.nodeChances['Split'] / 100) {
                 splitNode(node.id);
-            } else if (node.split && Math.random() < node.nodeChances['Unsplit'] / 100) {
+            } else if (node.split && !node.justCreated && Math.random() < node.nodeChances['Unsplit'] / 100) {
                 unsplitNode(node.id);
             }
         });
@@ -204,6 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
+
+        // Reset justCreated flag for next cycle
+        nodes.forEach(node => node.justCreated = false);
 
         drawing = false;
     };
@@ -347,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         particleArea.appendChild(particle);
-        const newNode = { id: particleCount, letterChances, nodeChances, split: false, children: [] };
+        const newNode = { id: particleCount, letterChances, nodeChances, split: false, children: [], justCreated: true };
         nodes.push(newNode);
         if (parentId) {
             const parent = nodes.find(n => n.id === parentId);
