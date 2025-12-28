@@ -124,12 +124,13 @@ document.addEventListener('DOMContentLoaded', () => {
         nodes.forEach(node => {
             const particle = particleArea.querySelector(`.particle[data-id="${node.id}"]`);
             if (particle) {
-                if (!node.split) {
+                if (!node.split && Object.keys(node.letterChances).length > 0) {
                     const selectedLetter = selectLetter(node.letterChances);
                     particle.textContent = selectedLetter;
-                } else {
+                } else if (node.split) {
                     particle.textContent = '';
                 }
+                // Special nodes keep their text
             }
         });
 
@@ -138,10 +139,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const particleMap = {};
         particles.forEach(particle => {
             const id = parseInt(particle.dataset.id);
+            const nodeData = nodes.find(n => n.id === id);
+            let x, y;
+            if (nodeData && nodeData.isSpecial) {
+                if (nodeData.type === 'input') {
+                    x = 25; // left + 25
+                    y = particleArea.offsetHeight / 2;
+                } else if (nodeData.type === 'output') {
+                    x = particleArea.offsetWidth - 25; // right - 25
+                    y = particleArea.offsetHeight / 2;
+                }
+            } else {
+                x = parseFloat(particle.style.left) + 25;
+                y = parseFloat(particle.style.top) + 25;
+            }
             particleMap[id] = {
-                x: parseFloat(particle.style.left) + 25,
-                y: parseFloat(particle.style.top) + 25,
-                nodeData: nodes.find(n => n.id === id)
+                x: x,
+                y: y,
+                nodeData: nodeData
             };
         });
         particles.forEach(particle => {
@@ -359,10 +374,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Add chance to the new node for existing nodes
-        nodes.slice(0, -1).forEach(node => {
-            node.nodeChances[`Node ${particleCount}`] = Math.floor(Math.random() * 101);
-        })
+         // Add chance to the new node for existing nodes (except output node which has no outgoing)
+         nodes.slice(0, -1).forEach(node => {
+             if (node.id !== 0) {
+                 node.nodeChances[`Node ${particleCount}`] = Math.floor(Math.random() * 101);
+             }
+         })
 
         // If a node is currently selected, update its display
         if (currentSelectedNode) {
@@ -404,6 +421,113 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Initial canvas size
-    updateCanvasSize();
-});
+     // Initial canvas size
+     updateCanvasSize();
+
+     // Create input node (left)
+     const inputNode = {
+         id: -1,
+         letterChances: {},
+         nodeChances: {}, // will get chances to others as they are created
+         split: false,
+         children: [],
+         justCreated: false,
+         isSpecial: true,
+         type: 'input'
+     };
+     nodes.push(inputNode);
+     const inputParticle = document.createElement('div');
+     inputParticle.className = 'particle';
+     inputParticle.textContent = 'IN';
+     inputParticle.style.left = '0px';
+     inputParticle.style.top = '50%';
+     inputParticle.style.transform = 'translateY(-50%)';
+     inputParticle.dataset.id = '-1';
+     particleArea.appendChild(inputParticle);
+
+     // Create output node (right)
+     const outputNode = {
+         id: 0,
+         letterChances: {},
+         nodeChances: {}, // no outgoing connections
+         split: false,
+         children: [],
+         justCreated: false,
+         isSpecial: true,
+         type: 'output'
+     };
+     nodes.push(outputNode);
+     const outputParticle = document.createElement('div');
+     outputParticle.className = 'particle';
+     outputParticle.textContent = 'OUT';
+     outputParticle.style.left = (particleArea.offsetWidth - 50) + 'px';
+     outputParticle.style.top = '50%';
+     outputParticle.style.transform = 'translateY(-50%)';
+     outputParticle.dataset.id = '0';
+     particleArea.appendChild(outputParticle);
+
+     // Add dragging and clicking to special nodes
+     [inputParticle, outputParticle].forEach(particle => {
+         let dragging = false;
+         let startX, startY;
+         particle.addEventListener('mousedown', (e) => {
+             dragging = true;
+             startX = e.clientX;
+             startY = e.clientY;
+             const rect = particleArea.getBoundingClientRect();
+             const offsetX = e.clientX - rect.left - parseFloat(particle.style.left);
+             const offsetY = e.clientY - rect.top - parseFloat(particle.style.top);
+             const mousemove = (e) => {
+                 if (dragging) {
+                     const newLeft = e.clientX - rect.left - offsetX;
+                     const newTop = e.clientY - rect.top - offsetY;
+                     particle.style.left = Math.max(0, Math.min(newLeft, particleArea.offsetWidth - 50)) + 'px';
+                     particle.style.top = Math.max(0, Math.min(newTop, particleArea.offsetHeight - 50)) + 'px';
+                 }
+             };
+             const mouseup = (e) => {
+                 dragging = false;
+                 const dist = Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY);
+                 if (dist < 5) {
+                     // Click action for special nodes: open panels and transform view
+                     const nodeData = nodes.find(n => n.id == particle.dataset.id);
+                     currentSelectedNode = nodeData.id;
+                     populateLetterChances(nodeData.letterChances);
+                     populateNodeChances(nodeData.nodeChances);
+                     sidePanel.classList.add('active');
+                     leftPanel.classList.add('active');
+                     // Transform particleArea to zoom out and make room for panels
+                     const originalWidth = particleArea.offsetWidth;
+                     const leftOccupied = 270;
+                     const rightOccupied = 415;
+                     const availableLeft = leftOccupied;
+                     const availableRight = originalWidth - rightOccupied;
+                     const scale = (availableRight - availableLeft) / originalWidth;
+                     const centerX = (availableLeft + availableRight) / 2;
+                     const currentCenter = originalWidth / 2;
+                     const translateX = centerX - currentCenter;
+                     particleArea.style.transform = `scale(${scale}) translateX(${translateX}px)`;
+                     updateCanvasSize();
+                 }
+                 document.removeEventListener('mousemove', mousemove);
+                 document.removeEventListener('mouseup', mouseup);
+             };
+             document.addEventListener('mousemove', mousemove);
+             document.addEventListener('mouseup', mouseup);
+         });
+     });
+
+     // Update node chances for existing nodes to include the special ones
+     nodes.forEach(node => {
+         if (node.id > 0) { // existing user nodes
+             node.nodeChances['Node -1'] = Math.floor(Math.random() * 101);
+             node.nodeChances['Node 0'] = Math.floor(Math.random() * 101);
+         }
+     });
+
+     // For input node, add chance to connect to output and to itself
+     inputNode.nodeChances['Node 0'] = Math.floor(Math.random() * 101);
+     inputNode.nodeChances['Node -1'] = Math.floor(Math.random() * 101);
+     // For output, no outgoing
+
+ });
