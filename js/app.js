@@ -91,6 +91,21 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionCanvas.height = particleArea.offsetHeight;
     };
 
+    const selectLetter = (chances) => {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let total = 0;
+        for (const chance of Object.values(chances)) {
+            total += chance;
+        }
+        if (total === 0) return letters[Math.floor(Math.random() * 26)];
+        let rand = Math.random() * total;
+        for (const letter of letters) {
+            rand -= chances[letter] || 0;
+            if (rand <= 0) return letter;
+        }
+        return 'A'; // fallback
+    };
+
     let drawing = false;
     const drawConnections = () => {
         if (drawing) return; // Prevent recursion
@@ -102,6 +117,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 splitNode(node.id);
             } else if (node.split && Math.random() < node.nodeChances['Unsplit'] / 100) {
                 unsplitNode(node.id);
+            }
+        });
+
+        // Update letters for non-split nodes
+        nodes.forEach(node => {
+            const particle = particleArea.querySelector(`.particle[data-id="${node.id}"]`);
+            if (particle) {
+                if (!node.split) {
+                    const selectedLetter = selectLetter(node.letterChances);
+                    particle.textContent = selectedLetter;
+                } else {
+                    particle.textContent = '';
+                }
             }
         });
 
@@ -263,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         nodeChances[`Node ${particleCount}`] = Math.floor(Math.random() * 101);  // chance to self
         const particle = document.createElement('div');
         particle.className = 'particle';
-        particle.textContent = particleCount;
+        particle.textContent = selectLetter(letterChances);
         const maxLeft = particleArea.offsetWidth - 50;
         particle.style.left = Math.random() * maxLeft + 'px';
         particle.style.top = Math.random() * (particleArea.offsetHeight - 50) + 'px';
