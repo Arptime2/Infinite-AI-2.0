@@ -94,17 +94,66 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const selectLetter = (chances) => {
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        let primaryTotal = 0;
+        let secondaryTotal = 0;
+        for (const letter of letters) {
+            if (chances[letter]) {
+                primaryTotal += chances[letter].primary || 0;
+                secondaryTotal += chances[letter].secondary || 0;
+            }
+        }
+        let primaryLetter = 'A';
+        let secondaryLetter = 'A';
+        if (primaryTotal > 0) {
+            let rand = Math.random() * primaryTotal;
+            for (const letter of letters) {
+                rand -= chances[letter]?.primary || 0;
+                if (rand <= 0) {
+                    primaryLetter = letter;
+                    break;
+                }
+            }
+        } else {
+            primaryLetter = letters[Math.floor(Math.random() * 26)];
+        }
+        if (secondaryTotal > 0) {
+            let rand = Math.random() * secondaryTotal;
+            for (const letter of letters) {
+                rand -= chances[letter]?.secondary || 0;
+                if (rand <= 0) {
+                    secondaryLetter = letter;
+                    break;
+                }
+            }
+        } else {
+            secondaryLetter = letters[Math.floor(Math.random() * 26)];
+        }
+        return primaryLetter + secondaryLetter;
+    };
+
+    const selectCategory = (chances) => {
+        const categories = ['ALL', 'ANY', 'NANY', 'NALL'];
         let total = 0;
         for (const chance of Object.values(chances)) {
             total += chance;
         }
-        if (total === 0) return letters[Math.floor(Math.random() * 26)];
+        if (total === 0) return categories[Math.floor(Math.random() * 4)];
         let rand = Math.random() * total;
-        for (const letter of letters) {
-            rand -= chances[letter] || 0;
-            if (rand <= 0) return letter;
+        for (const cat of categories) {
+            rand -= chances[cat] || 0;
+            if (rand <= 0) return cat;
         }
-        return 'A'; // fallback
+        return 'ALL'; // fallback
+    };
+
+    const getCategoryColor = (category) => {
+        const colors = {
+            ALL: '#ff6b6b',
+            ANY: '#6b6bff',
+            NANY: '#6bff6b',
+            NALL: '#ffff6b'
+        };
+        return colors[category] || '#ff6b6b';
     };
 
     let drawing = false;
@@ -121,13 +170,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Update letters for non-split nodes
+        // Update letters and colors for non-split nodes
         nodes.forEach(node => {
             const particle = particleArea.querySelector(`.particle[data-id="${node.id}"]`);
             if (particle) {
                 if (!node.split && Object.keys(node.letterChances).length > 0) {
-                    const selectedLetter = selectLetter(node.letterChances);
-                    particle.textContent = selectedLetter;
+                    const selectedLetters = selectLetter(node.letterChances);
+                    particle.textContent = selectedLetters;
+                    const selectedCategory = selectCategory(node.categoryChances);
+                    particle.style.background = getCategoryColor(selectedCategory);
                 } else if (node.split) {
                     particle.textContent = '';
                 }
@@ -231,7 +282,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const chances = {};
         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         letters.split('').forEach(letter => {
-            chances[letter] = Math.floor(Math.random() * 101);
+            chances[letter] = {
+                primary: Math.floor(Math.random() * 101),
+                secondary: Math.floor(Math.random() * 101)
+            };
         });
         return chances;
     };
@@ -248,12 +302,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-    const populateLetterChances = (chances) => {
+    const populateLetterChances = (letterData, categoryData) => {
         letterChances.innerHTML = '';
-        for (const letter in chances) {
+        for (const letter in letterData) {
             const row = document.createElement('div');
             row.className = 'letter-row';
-            row.innerHTML = `<span>${letter}:</span> <span>${chances[letter]}%</span>`;
+            row.innerHTML = `<span>${letter}:</span> <span>${letterData[letter].primary}%</span> <span>${letterData[letter].secondary}%</span>`;
+            letterChances.appendChild(row);
+        }
+        // Add category chances
+        const categories = ['ALL', 'ANY', 'NANY', 'NALL'];
+        for (const category of categories) {
+            const row = document.createElement('div');
+            row.className = 'category-row';
+            row.style.backgroundColor = getCategoryColor(category);
+            row.innerHTML = `<span>${category}:</span> <span>${categoryData[category] || 0}%</span>`;
             letterChances.appendChild(row);
         }
     };
@@ -308,9 +371,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const letterChances = generateRandomChances();
         const nodeChances = generateNodeChances();  // chances to existing nodes
         nodeChances[`Node ${particleCount}`] = Math.floor(Math.random() * 101);  // chance to self
+        const categoryChances = {
+            ALL: Math.floor(Math.random() * 101),
+            ANY: Math.floor(Math.random() * 101),
+            NANY: Math.floor(Math.random() * 101),
+            NALL: Math.floor(Math.random() * 101)
+        };
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.textContent = selectLetter(letterChances);
+        particle.style.background = getCategoryColor(selectCategory(categoryChances));
         const maxLeft = particleArea.offsetWidth - 50;
         particle.style.left = Math.random() * maxLeft + 'px';
         particle.style.top = Math.random() * (particleArea.offsetHeight - 50) + 'px';
@@ -341,12 +411,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (dist < 5) {
                     // Click action
                     const nodeData = nodes.find(n => n.id == particle.dataset.id);
-                    currentSelectedNode = nodeData.id;
-                     populateLetterChances(nodeData.letterChances);
-                     populateNodeChances(nodeData.nodeChances);
-                     sidePanel.classList.add('active');
-                     leftPanel.classList.add('active');
-                     inputPanel.classList.add('hidden');
+                      currentSelectedNode = nodeData.id;
+                      populateLetterChances(nodeData.letterChances, nodeData.categoryChances);
+                      populateNodeChances(nodeData.nodeChances);
+                      sidePanel.classList.add('active');
+                      leftPanel.classList.add('active');
+                      inputPanel.classList.add('hidden');
                      const originalWidth = particleArea.offsetWidth;
                     const leftOccupied = 270;
                     const rightOccupied = 415;
@@ -367,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         particleArea.appendChild(particle);
-        const newNode = { id: particleCount, letterChances, nodeChances, split: false, children: [], justCreated: true };
+        const newNode = { id: particleCount, letterChances, nodeChances, categoryChances, split: false, children: [], justCreated: true };
         nodes.push(newNode);
         if (parentId) {
             const parent = nodes.find(n => n.id === parentId);
@@ -431,17 +501,18 @@ document.addEventListener('DOMContentLoaded', () => {
      // Initial canvas size
      updateCanvasSize();
 
-     // Create input node (left)
-     const inputNode = {
-         id: -1,
-         letterChances: {},
-         nodeChances: {}, // will get chances to others as they are created
-         split: false,
-         children: [],
-         justCreated: false,
-         isSpecial: true,
-         type: 'input'
-     };
+      // Create input node (left)
+      const inputNode = {
+          id: -1,
+          letterChances: {},
+          nodeChances: {}, // will get chances to others as they are created
+          categoryChances: {},
+          split: false,
+          children: [],
+          justCreated: false,
+          isSpecial: true,
+          type: 'input'
+      };
      nodes.push(inputNode);
      const inputParticle = document.createElement('div');
      inputParticle.className = 'particle';
@@ -452,17 +523,18 @@ document.addEventListener('DOMContentLoaded', () => {
      inputParticle.dataset.id = '-1';
      particleArea.appendChild(inputParticle);
 
-     // Create output node (right)
-     const outputNode = {
-         id: 0,
-         letterChances: {},
-         nodeChances: {}, // no outgoing connections
-         split: false,
-         children: [],
-         justCreated: false,
-         isSpecial: true,
-         type: 'output'
-     };
+      // Create output node (right)
+      const outputNode = {
+          id: 0,
+          letterChances: {},
+          nodeChances: {}, // no outgoing connections
+          categoryChances: {},
+          split: false,
+          children: [],
+          justCreated: false,
+          isSpecial: true,
+          type: 'output'
+      };
      nodes.push(outputNode);
      const outputParticle = document.createElement('div');
      outputParticle.className = 'particle';
@@ -499,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
                      // Click action for special nodes: open panels and transform view
                      const nodeData = nodes.find(n => n.id == particle.dataset.id);
                      currentSelectedNode = nodeData.id;
-                     populateLetterChances(nodeData.letterChances);
+                     populateLetterChances(nodeData.letterChances, nodeData.categoryChances);
                      populateNodeChances(nodeData.nodeChances);
                      sidePanel.classList.add('active');
                      leftPanel.classList.add('active');

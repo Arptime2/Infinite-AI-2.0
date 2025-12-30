@@ -248,6 +248,34 @@ body {
     color: #cccccc;
 }
 
+.letter-row span:nth-child(3) {
+    margin-left: 15px;
+    font-size: 14px;
+    color: #cccccc;
+}
+
+.category-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #444;
+}
+
+.category-row span:first-child {
+    width: 50px;
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.category-row span:nth-child(2) {
+    margin-left: 15px;
+    font-size: 14px;
+    color: #000000;
+}
+
 .node-chance-row {
     display: flex;
     align-items: center;
