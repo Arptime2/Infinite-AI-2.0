@@ -107,8 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const inNode = flowNodes.find(n => n.id === 'IN');
         if (inNode) {
             let letter;
-            if (inNode.inputQueue && inNode.inputQueue.length > 0) {
-                letter = inNode.inputQueue.shift();
+            const input = document.getElementById('command-input').value;
+            if (input.length > 0) {
+                letter = input[input.length - 1].toUpperCase();
             } else {
                 letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
             }
@@ -171,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create flow nodes
     const inNode = new FlowNode('IN', '', '', '');
-    inNode.inputQueue = ['A', 'B', 'A', 'C', 'B', 'B', 'A', 'D', 'B', 'E'];
     const nodeA = new FlowNode('A', 'A', 'D', 'NANY');
     const nodeB = new FlowNode('B', 'B', 'C', 'ALL');
     const outNode = new FlowNode('OUT', '', '', '');
