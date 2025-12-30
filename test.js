@@ -8,7 +8,7 @@ const nodeB = new Node('B', 'B', 'C', 'ALL');
 const outNode = new Node('OUT', '', '', ''); // Special
 
 // Define inputs for IN node per cycle (optional, falls back to random)
-inNode.inputQueue = ['A', 'B', 'A', 'C', 'B', 'B', 'A', 'D', 'B', 'E']; // For 10 cycles
+inNode.inputQueue = ['A', '', 'A', 'C', '', 'B', 'A', 'D', 'B', 'E']; // For 10 cycles
 
 // Connect: IN -> A -> B -> OUT, and IN -> B -> OUT
 inNode.outputs = ['A', 'B'];
