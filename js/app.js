@@ -9,194 +9,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectionCanvas = document.getElementById('connection-canvas');
     const canvasCtx = connectionCanvas.getContext('2d');
     let particleCount = 0;
-    const nodes = [];
+     const nodes = [];
+     window.nodes = nodes;
 
-    // Flow logic
-    class FlowNode {
-        constructor(id, letter1, letter2, type) {
-            this.id = id;
-            this.letter1 = letter1;
-            this.letter2 = letter2;
-            this.type = type;
-            this.inputs = [];
-            this.outputs = [];
-            this.inputQueue = [];
-            this.delayedOutput = null;
-        }
-    }
 
-    function selectFlowLetter(chances) {
-        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let primaryTotal = 0;
-        let secondaryTotal = 0;
-        for (const letter of letters) {
-            if (chances[letter]) {
-                primaryTotal += chances[letter].primary || 0;
-                secondaryTotal += chances[letter].secondary || 0;
-            }
-        }
-        let primaryLetter = 'A';
-        let secondaryLetter = 'A';
-        if (primaryTotal > 0) {
-            let rand = Math.random() * primaryTotal;
-            for (const letter of letters) {
-                rand -= chances[letter]?.primary || 0;
-                if (rand <= 0) {
-                    primaryLetter = letter;
-                    break;
-                }
-            }
-        } else {
-            primaryLetter = letters[Math.floor(Math.random() * 26)];
-        }
-        if (secondaryTotal > 0) {
-            let rand = Math.random() * secondaryTotal;
-            for (const letter of letters) {
-                rand -= chances[letter]?.secondary || 0;
-                if (rand <= 0) {
-                    secondaryLetter = letter;
-                    break;
-                }
-            }
-        } else {
-            secondaryLetter = letters[Math.floor(Math.random() * 26)];
-        }
-        return primaryLetter + secondaryLetter;
-    }
 
-    function selectFlowCategory(chances) {
-        const categories = ['ALL', 'ANY', 'NANY', 'NALL'];
-        let total = 0;
-        for (const chance of Object.values(chances)) {
-            total += chance;
-        }
-        if (total === 0) return categories[Math.floor(Math.random() * 4)];
-        let rand = Math.random() * total;
-        for (const cat of categories) {
-            rand -= chances[cat] || 0;
-            if (rand <= 0) return cat;
-        }
-        return 'ALL';
-    }
+     // Clock button
+     let clockRunning = false;
+     let clockInterval = null;
+     const clockBtn = document.getElementById('clock-btn');
+     clockBtn.addEventListener('click', () => {
+         if (clockRunning) {
+             clearInterval(clockInterval);
+             clockRunning = false;
+             clockBtn.textContent = 'Start Clock';
+         } else {
+             clockInterval = setInterval(() => {
+                 executeCycle(flowNodes);
+             }, 30);
+             clockRunning = true;
+             clockBtn.textContent = 'Stop Clock';
+         }
+     });
 
-    function getFlowCategoryColor(category) {
-        const colors = {
-            ALL: '#ff6b6b',
-            ANY: '#6b6bff',
-            NANY: '#6bff6b',
-            NALL: '#ffff6b'
-        };
-        return colors[category] || '#ff6b6b';
-    }
+     const runTestBtn = document.getElementById('run-test-btn');
+     runTestBtn.addEventListener('click', () => {
+         runTest();
+     });
 
-    function executeCycle(flowNodes) {
-        // Send delayed outputs
-        flowNodes.forEach(node => {
-            if (node.delayedOutput !== null) {
-                node.outputs.forEach(targetId => {
-                    const target = flowNodes.find(n => n.id === targetId);
-                    if (target) {
-                        target.inputs.push(node.delayedOutput);
-                    }
-                });
-                node.delayedOutput = null;
-            }
-        });
+     const runTest = () => {
+         // Create test nodes based on current GUI nodes
+         const testNodes = [];
+         const nodeMap = {};
+         window.nodes.forEach(node => {
+             let newNode;
+         if (node.isSpecial) {
+             newNode = new FlowNode(node.id === -1 ? 'IN' : 'OUT', '', '', '');
+         } else {
+             const letters = selectLetter(node.letterChances);
+             const category = selectCategory(node.categoryChances);
+             newNode = new FlowNode(node.id.toString(), letters[0], letters[1], category);
+         }
+             testNodes.push(newNode);
+             nodeMap[node.id] = newNode;
+         });
 
-        // IN sends
-        const inNode = flowNodes.find(n => n.id === 'IN');
-        if (inNode) {
-            let letter;
-            const input = document.getElementById('command-input').value;
-            if (input.length > 0) {
-                letter = input[input.length - 1].toUpperCase();
-            } else {
-                letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-            }
-            console.log(`IN outputs: ${letter}`);
-            inNode.outputs.forEach(targetId => {
-                const target = flowNodes.find(n => n.id === targetId);
-                if (target) {
-                    target.inputs.push(letter);
-                }
-            });
-        }
+         // Set connections based on current connections
+         if (window.currentConnections) {
+             window.currentConnections.forEach(conn => {
+                 const fromNode = nodeMap[conn.from];
+                 if (fromNode) {
+                     fromNode.outputs.push(conn.to.toString());
+                 }
+             });
+         }
 
-        // Compute for processing nodes
-        const otherNodes = flowNodes.filter(n => n.id !== 'IN' && n.id !== 'OUT');
-        otherNodes.forEach(node => {
-            let output = null;
-            const first = node.letter1;
-            const second = node.letter2;
+         // Set IN inputQueue to empty (random)
+         const inNodeTest = testNodes.find(n => n.id === 'IN');
+         if (inNodeTest) {
+             inNodeTest.inputQueue = [];
+         }
 
-            if (node.type === 'ANY') {
-                if (node.inputs.some(inp => inp === first)) {
-                    output = second;
-                }
-            } else if (node.type === 'ALL') {
-                const nonEmpty = node.inputs.filter(inp => inp !== '');
-                if (nonEmpty.length > 0 && nonEmpty.every(inp => inp === first)) {
-                    output = second;
-                }
-            } else if (node.type === 'NANY') {
-                if (!node.inputs.some(inp => inp === first)) {
-                    output = second;
-                }
-            } else if (node.type === 'NALL') {
-                const nonEmpty = node.inputs.filter(inp => inp !== '');
-                if (nonEmpty.length === 0 || !nonEmpty.every(inp => inp === first)) {
-                    output = second;
-                }
-            }
-
-            if (output) {
-                console.log(`Node ${node.id} (${node.type}) outputs: ${output}`);
-                node.delayedOutput = output;
-            } else {
-                console.log(`Node ${node.id} (${node.type}) outputs nothing`);
-                node.delayedOutput = null;
-            }
-        });
-
-        // OUT logs
-        const outNode = flowNodes.find(n => n.id === 'OUT');
-        if (outNode && outNode.inputs.length > 0) {
-            console.log('OUT received:', outNode.inputs.join(', '));
-        } else {
-            console.log('OUT received nothing');
-        }
-
-        // Clear inputs
-        flowNodes.forEach(node => node.inputs = []);
-    }
-
-    // Create flow nodes
-    const inNode = new FlowNode('IN', '', '', '');
-    const nodeA = new FlowNode('A', 'A', 'D', 'NANY');
-    const nodeB = new FlowNode('B', 'B', 'C', 'ALL');
-    const outNode = new FlowNode('OUT', '', '', '');
-    inNode.outputs = ['A', 'B'];
-    nodeA.outputs = ['B'];
-    nodeB.outputs = ['OUT'];
-    const flowNodes = [inNode, nodeA, nodeB, outNode];
-
-    // Clock button
-    let clockRunning = false;
-    let clockInterval = null;
-    const clockBtn = document.getElementById('clock-btn');
-    clockBtn.addEventListener('click', () => {
-        if (clockRunning) {
-            clearInterval(clockInterval);
-            clockRunning = false;
-            clockBtn.textContent = 'Start Clock';
-        } else {
-            clockInterval = setInterval(() => {
-                executeCycle(flowNodes);
-            }, 30);
-            clockRunning = true;
-            clockBtn.textContent = 'Stop Clock';
-        }
-    });
+         // Run asynchronous cycles
+         let cycleCount = 0;
+         const startTime = Date.now();
+         const stopAfterMs = 500; // Run for 500ms
+         console.log('Starting test with current state...');
+         const testInterval = setInterval(() => {
+             const elapsed = Date.now() - startTime;
+             if (elapsed >= stopAfterMs) {
+                 clearInterval(testInterval);
+                 console.log('Test stopped after', elapsed, 'ms.');
+                 return;
+             }
+             cycleCount++;
+             console.log(`\n--- Cycle ${cycleCount} (elapsed: ${elapsed}ms) ---`);
+             executeCycle(testNodes);
+         }, 30);
+     };
 
     const deleteNode = (nodeId) => {
         const node = nodes.find(n => n.id === nodeId);
@@ -279,59 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectionCanvas.height = particleArea.offsetHeight;
     };
 
-    const selectLetter = (chances) => {
-        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        let primaryTotal = 0;
-        let secondaryTotal = 0;
-        for (const letter of letters) {
-            if (chances[letter]) {
-                primaryTotal += chances[letter].primary || 0;
-                secondaryTotal += chances[letter].secondary || 0;
-            }
-        }
-        let primaryLetter = 'A';
-        let secondaryLetter = 'A';
-        if (primaryTotal > 0) {
-            let rand = Math.random() * primaryTotal;
-            for (const letter of letters) {
-                rand -= chances[letter]?.primary || 0;
-                if (rand <= 0) {
-                    primaryLetter = letter;
-                    break;
-                }
-            }
-        } else {
-            primaryLetter = letters[Math.floor(Math.random() * 26)];
-        }
-        if (secondaryTotal > 0) {
-            let rand = Math.random() * secondaryTotal;
-            for (const letter of letters) {
-                rand -= chances[letter]?.secondary || 0;
-                if (rand <= 0) {
-                    secondaryLetter = letter;
-                    break;
-                }
-            }
-        } else {
-            secondaryLetter = letters[Math.floor(Math.random() * 26)];
-        }
-        return primaryLetter + secondaryLetter;
-    };
 
-    const selectCategory = (chances) => {
-        const categories = ['ALL', 'ANY', 'NANY', 'NALL'];
-        let total = 0;
-        for (const chance of Object.values(chances)) {
-            total += chance;
-        }
-        if (total === 0) return categories[Math.floor(Math.random() * 4)];
-        let rand = Math.random() * total;
-        for (const cat of categories) {
-            rand -= chances[cat] || 0;
-            if (rand <= 0) return cat;
-        }
-        return 'ALL'; // fallback
-    };
 
     const getCategoryColor = (category) => {
         const colors = {
@@ -348,32 +186,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (drawing) return; // Prevent recursion
         drawing = true;
 
-        // Random split/unsplit based on chances
-        nodes.forEach(node => {
-            if (!node.split && !node.justCreated && Math.random() < node.nodeChances['Split'] / 100) {
-                splitNode(node.id);
-            } else if (node.split && !node.justCreated && Math.random() < node.nodeChances['Unsplit'] / 100) {
-                unsplitNode(node.id);
-            }
-        });
+         window.currentConnections = [];
 
-        // Update letters and colors for non-split nodes
-        nodes.forEach(node => {
-            const particle = particleArea.querySelector(`.particle[data-id="${node.id}"]`);
-            if (particle) {
-                if (!node.split && Object.keys(node.letterChances).length > 0) {
-                    const selectedLetters = selectLetter(node.letterChances);
-                    particle.textContent = selectedLetters;
-                    const selectedCategory = selectCategory(node.categoryChances);
-                    particle.style.background = getCategoryColor(selectedCategory);
-                } else if (node.split) {
-                    particle.textContent = '';
-                }
-                // Special nodes keep their text
-            }
-        });
+         // Random split/unsplit based on chances
+         nodes.forEach(node => {
+             if (!node.split && !node.justCreated && Math.random() < node.nodeChances['Split'] / 100) {
+                 splitNode(node.id);
+             } else if (node.split && !node.justCreated && Math.random() < node.nodeChances['Unsplit'] / 100) {
+                 unsplitNode(node.id);
+             }
+         });
 
-        canvasCtx.clearRect(0, 0, connectionCanvas.width, connectionCanvas.height);
+         // Update letters and colors for non-split nodes
+         nodes.forEach(node => {
+             const particle = particleArea.querySelector(`.particle[data-id="${node.id}"]`);
+             if (particle) {
+                 if (!node.split && Object.keys(node.letterChances).length > 0) {
+                     const selectedLetters = selectLetter(node.letterChances);
+                     particle.textContent = selectedLetters;
+                     const selectedCategory = selectCategory(node.categoryChances);
+                     particle.style.background = getCategoryColor(selectedCategory);
+                 } else if (node.split) {
+                     particle.textContent = '';
+                 }
+                 // Special nodes keep their text
+             }
+         });
+
+         canvasCtx.clearRect(0, 0, connectionCanvas.width, connectionCanvas.height);
         const particles = particleArea.querySelectorAll('.particle');
         const particleMap = {};
         particles.forEach(particle => {
@@ -410,12 +250,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (targetId !== nodeId && particleMap[targetId] && Math.random() < chance / 100) {
                     const x2 = particleMap[targetId].x;
                     const y2 = particleMap[targetId].y;
-                    canvasCtx.beginPath();
-                    canvasCtx.moveTo(x1, y1);
-                    canvasCtx.lineTo(x2, y2);
-                        canvasCtx.strokeStyle = `rgba(102, 126, 234, 0.5)`;
-                        canvasCtx.lineWidth = 2;
-                        canvasCtx.stroke();
+                     window.currentConnections.push({from: nodeId, to: targetId});
+                     canvasCtx.beginPath();
+                     canvasCtx.moveTo(x1, y1);
+                     canvasCtx.lineTo(x2, y2);
+                         canvasCtx.strokeStyle = `rgba(102, 126, 234, 0.5)`;
+                         canvasCtx.lineWidth = 2;
+                         canvasCtx.stroke();
 
                         // Draw arrow in the middle
                         const midX = (x1 + x2) / 2;
@@ -435,11 +276,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (targetId === nodeId && Math.random() < chance / 100) {
                         // Draw self-loop as a full circle around the node
                         const loopRadius = 35;
-                        canvasCtx.beginPath();
-                        canvasCtx.arc(x1, y1, loopRadius, 0, Math.PI * 2);
-                        canvasCtx.strokeStyle = `rgba(102, 126, 234, ${chance / 200})`;
-                        canvasCtx.lineWidth = 2;
-                        canvasCtx.stroke();
+                         window.currentConnections.push({from: nodeId, to: targetId});
+                         canvasCtx.beginPath();
+                         canvasCtx.arc(x1, y1, loopRadius, 0, Math.PI * 2);
+                         canvasCtx.strokeStyle = `rgba(102, 126, 234, ${chance / 200})`;
+                         canvasCtx.lineWidth = 2;
+                         canvasCtx.stroke();
 
                         // Draw arrow on the top of the circle
                         const arrowX = x1;
@@ -658,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
         drawConnections();
     });
 
-    // Update connections every second
-    setInterval(drawConnections, 1000);
+     // Update connections every second
+     setInterval(drawConnections, 1000);
 
     // Close panels when clicking outside
     particleArea.addEventListener('click', (e) => {
