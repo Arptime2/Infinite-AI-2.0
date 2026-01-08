@@ -96,31 +96,6 @@ body {
     -moz-appearance: textfield;
 }
 
-#clock-btn {
-    display: inline-block;
-    margin-top: 15px;
-    padding: 10px 20px;
-    background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
-    color: #e2e8f0;
-    border: 1px solid #4a5568;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    box-shadow: 0 4px 15px rgba(66, 153, 225, 0.2);
-    transition: all 0.3s ease;
-}
-
-#clock-btn:hover {
-    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-    border-color: #718096;
-    box-shadow: 0 6px 20px rgba(66, 153, 225, 0.4);
-    transform: translateY(-2px);
-    color: #ffffff;
-}
-
 .left-panel {
     position: absolute;
     left: 10px;

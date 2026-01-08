@@ -14,24 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-     // Clock button
-     let clockRunning = false;
-     let clockInterval = null;
-     const clockBtn = document.getElementById('clock-btn');
-     clockBtn.addEventListener('click', () => {
-         if (clockRunning) {
-             clearInterval(clockInterval);
-             clockRunning = false;
-             clockBtn.textContent = 'Start Clock';
-         } else {
-             clockInterval = setInterval(() => {
-                 executeCycle(flowNodes);
-             }, 30);
-             clockRunning = true;
-             clockBtn.textContent = 'Stop Clock';
-         }
-     });
-
      const trainBtn = document.getElementById('train-btn');
       const trainIntervalInput = document.getElementById('train-interval');
       let trainRunning = false;
