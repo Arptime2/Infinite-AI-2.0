@@ -46,8 +46,7 @@ body {
 }
 
 #train-btn {
-    display: block;
-    margin-top: 15px;
+    display: inline-block;
     padding: 10px 20px;
     background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
     color: #e2e8f0;
@@ -70,8 +69,35 @@ body {
     color: #ffffff;
 }
 
+#train-interval {
+    width: 70px;
+    padding: 8px 10px;
+    background-color: #2a2a2a;
+    border: 1px solid #4a5568;
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 14px;
+    text-align: center;
+}
+
+#train-interval:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+}
+
+#train-interval::-webkit-inner-spin-button,
+#train-interval::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#train-interval {
+    -moz-appearance: textfield;
+}
+
 #clock-btn {
-    display: block;
+    display: inline-block;
     margin-top: 15px;
     padding: 10px 20px;
     background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
