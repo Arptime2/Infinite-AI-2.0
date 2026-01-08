@@ -113,7 +113,7 @@ function executeCycle(flowNodes) {
                 }
             });
         } else {
-            console.log(`IN outputs: (nothing)`);
+            console.log(`IN outputs: nothing`);
         }
     }
 
