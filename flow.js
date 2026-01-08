@@ -76,6 +76,12 @@ function getFlowCategoryColor(category) {
     return colors[category] || '#ff6b6b';
 }
 
+let pendingInput = null;
+
+function setInput(letter) {
+    pendingInput = letter;
+}
+
 function executeCycle(flowNodes) {
     // Send delayed outputs
     flowNodes.forEach(node => {
@@ -93,20 +99,22 @@ function executeCycle(flowNodes) {
     // IN sends
     const inNode = flowNodes.find(n => n.id === 'IN');
     if (inNode) {
-        let letter;
-        const input = document.getElementById('command-input').value;
-        if (input.length > 0) {
-            letter = input[input.length - 1].toUpperCase();
-        } else {
-            letter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        let letter = null;
+        if (pendingInput !== null) {
+            letter = pendingInput;
+            pendingInput = null;
         }
-        console.log(`IN outputs: ${letter}`);
-        inNode.outputs.forEach(targetId => {
-            const target = flowNodes.find(n => n.id === targetId);
-            if (target) {
-                target.inputs.push(letter);
-            }
-        });
+        if (letter !== null) {
+            console.log(`IN outputs: ${letter}`);
+            inNode.outputs.forEach(targetId => {
+                const target = flowNodes.find(n => n.id === targetId);
+                if (target) {
+                    target.inputs.push(letter);
+                }
+            });
+        } else {
+            console.log(`IN outputs: (nothing)`);
+        }
     }
 
     // Compute for processing nodes
@@ -168,6 +176,7 @@ nodeB.outputs = ['OUT'];
 window.FlowNode = FlowNode;
 window.selectLetter = selectLetter;
 window.selectCategory = selectCategory;
+window.setInput = setInput;
 
 const flowNodes = [inNode, nodeA, nodeB, outNode];
 window.flowNodes = flowNodes;
